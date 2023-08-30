@@ -6,7 +6,7 @@ import { ISubWorkflow } from '../store/subworkflows/types';
 import { IFeature } from '../store/features/types';
 import { Color } from '../core/misc';
 
-const endpoint = process.env.REACT_APP_API_ENDPOINT ? process.env.REACT_APP_API_ENDPOINT : "/v1"
+const endpoint = process.env.REACT_APP_API_ENDPOINT ? process.env.REACT_APP_API_ENDPOINT : 'v1'
 
 export interface API_SIGN_UP_REQ {
     workspaceName: string

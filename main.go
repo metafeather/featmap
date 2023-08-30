@@ -7,7 +7,9 @@ import (
 	bindata "github.com/golang-migrate/migrate/v4/source/go_bindata"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -63,6 +65,12 @@ func main() {
 		log.Fatalln("no conf.json found")
 	}
 
+	u, err := url.Parse(config.AppSiteURL)
+	if err != nil {
+		log.Fatalln("no valid AppSiteURL found in conf.json")
+	}	
+	prefix := u.Path	
+
 	db, err := sqlx.Connect("postgres", config.DbConnectionString)
 	if err != nil {
 		log.Fatalln("database error")
@@ -107,10 +115,15 @@ func main() {
 	// processing should be stopped.
 	r.Use(middleware.Timeout(60 * time.Second))
 
-	r.Route("/v1/users", usersAPI)     // Nothing is needed
-	r.Route("/v1/link", linkAPI)       // Nothing is needed
-	r.Route("/v1/account", accountAPI) // Account needed
-	r.Route("/v1/", workspaceApi)      // Account + workspace is needed
+	r.Route(path.Join(prefix, "/v1/users"), usersAPI)     // Nothing is needed
+	r.Route(path.Join(prefix, "/v1/link"), linkAPI)       // Nothing is needed
+	r.Route(path.Join(prefix, "/v1/account"), accountAPI) // Account needed
+	r.Route(path.Join(prefix, "/v1/"), workspaceApi)      // Account + workspace is needed
+
+	r.Get(path.Join(prefix, "/conf.json"), func(w http.ResponseWriter, r *http.Request) {
+		s := `{"prefix": "` + prefix + `"}`
+		http.ServeContent(w, r, "conf.json", time.Now(), strings.NewReader(s))
+	})
 
 	files := &assetfs.AssetFS{
 		Asset:     webapp.Asset,
@@ -119,14 +132,14 @@ func main() {
 		Prefix:    "webapp/build/static",
 	}
 
-	FileServer(r, "/static", files)
+	FileServer(r, path.Join(prefix, "/static"), files)
 
-	r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
+	r.Get(path.Join(prefix, "/*"), func(w http.ResponseWriter, r *http.Request) {
 		index, _ := webapp.Asset("webapp/build/index.html")
 		http.ServeContent(w, r, "index.html", time.Now(), strings.NewReader(string(index)))
 	})
 
-	fmt.Println("Serving on port " + config.Port)
+	fmt.Println("Serving on port " + config.Port + " " + prefix)
 	_ = http.ListenAndServe(":"+config.Port, r)
 }
 

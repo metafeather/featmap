@@ -3,7 +3,8 @@ import { createStore, compose, applyMiddleware } from 'redux'
 import { routerMiddleware } from 'connected-react-router'
 import { reducer } from './store'
 
-export const history = createBrowserHistory()
+const basename = new URL(document.baseURI).pathname;
+export const history = createBrowserHistory({basename});
 
 export default function configureStore(
     initialState?: any
